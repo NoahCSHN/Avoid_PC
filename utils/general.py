@@ -1,16 +1,9 @@
 # General utils
 
-import glob
-import logging
-import math
-import os
-import platform
-import random
-import re
-import subprocess
-import time
+import glob,functools,logging,math,os,platform,random,re,subprocess,time
 from pathlib import Path
 from subprocess import PIPE,Popen
+from contextlib import contextmanager
 
 import cv2
 import numpy as np
@@ -588,3 +581,22 @@ def find_cam(cam):
             if cam in dev_name:
                 return dev_idx.decode('utf8')
     return None
+
+def timethis(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        r = func(*args, **kwargs)
+        end = time.perf_counter()
+        print('{}.{} : {}'.format(func.__module__, func.__name__, end - start))
+        return r
+    return wrapper
+
+@contextmanager
+def timeblock(label):
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        end = time.perf_counter()
+        print('{} : {}'.format(label, end - start))

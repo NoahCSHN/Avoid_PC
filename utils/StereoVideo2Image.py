@@ -29,16 +29,16 @@ vid_formats = ['mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv']  # accep
 def StereoVideo2pic(Vsource,Ipath):
     Vdataset = LoadStereoImages(Vsource)
     file_dir = str(Path(Ipath).absolute())
-    left_file_dir = file_dir + '/left'
-    right_file_dir = file_dir + '/right'
+    left_file_dir = os.path.join(file_dir,'left')
+    right_file_dir = os.path.join(file_dir,'right')
     if not os.path.isdir(left_file_dir):
         os.makedirs(left_file_dir)
     if not os.path.isdir(right_file_dir):
         os.makedirs(right_file_dir)
     i = 0
     for path, image_left, image_right, im0s, vid_cap in Vdataset:
-        imgl_path=os.path.join(file_dir, str(i)+'_left.png')
-        imgr_path=os.path.join(file_dir, str(i)+'_right.png')
+        imgl_path=os.path.join(left_file_dir, str(i)+'_left.png')
+        imgr_path=os.path.join(right_file_dir, str(i)+'_right.png')
         cv2.imwrite(imgl_path, image_left)
         cv2.imwrite(imgr_path,image_right)
         i += 1
@@ -96,14 +96,14 @@ class LoadStereoImages:  # for inference
                     ret_val, img0 = self.cap.read()
 
             self.frame += 1
-            print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='')
+            print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='\n')
 
         else:
             # Read image
             self.count += 1
             img0 = cv2.imread(path)  # BGR
             assert img0 is not None, 'Image Not Found ' + path
-            print(f'image {self.count}/{self.nf} {path}: ', end='')
+            print(f'image {self.count}/{self.nf} {path}: ')
 
         # Padded resize
         h = img0.shape[0]
@@ -128,4 +128,4 @@ class LoadStereoImages:  # for inference
         return self.nf  # number of files
     
 if __name__ == '__main__':
-    StereoVideo2pic(Vsource = 'data/images/VideoTest01.avi', Ipath = 'runs/detect/exp/test')
+    StereoVideo2pic(Vsource = '/home/bynav/AI_SGBM/data/images/yyc/stereo_test/calib', Ipath = '/home/bynav/AI_SGBM/data/images/yyc/stereo_test')

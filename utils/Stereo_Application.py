@@ -2,6 +2,7 @@ import numpy as np
 import argparse,logging,time
 import cv2
 from matplotlib import pyplot as plt
+from utils.general import timethis
 
 class Cursor:
     def __init__(self, ax):
@@ -69,7 +70,8 @@ class SGBM:
     def __del__(self):
         class_name=self.__class__.__name__
         print (class_name,"release")
-        
+    
+    @timethis
     def run(self,ImgL,ImgR):
         t0 = time.time()
         self.imgL = ImgL

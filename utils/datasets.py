@@ -809,7 +809,11 @@ def replicate(img, labels):
 
 def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
     # Resize and pad image while meeting stride-multiple constraints
-    shape = img.shape[:2]  # current shape [height, width]
+    if type(img) == cv2.UMat:
+        shape = img.get().shape[:2]
+    else:
+        shape = img.shape[:2]    
+    # shape = img.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
         new_shape = (new_shape, new_shape)
 
@@ -1198,7 +1202,8 @@ class LoadStereoImages:  # for inference
 
 
 class LoadStereoWebcam:  # for inference
-    def __init__(self, pipe='0', img_size=640, stride=32):
+    def __init__(self, pipe='0', img_size=640, stride=32, UMat=False):
+        self.UMat = UMat
         self.img_size = img_size
         self.stride = stride
         if pipe.isnumeric():
@@ -1210,10 +1215,19 @@ class LoadStereoWebcam:  # for inference
         self.pipe = pipe
         self.writer = None
         self.cap = cv2.VideoCapture(pipe)  # video capture object
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)  # set buffer size
+        # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)  # set buffer size
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,2560)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
+        # self.cap.set(cv2.CAP_PROP_FPS,5)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,2560)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,960) #AR0135
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720) #OV9714
         self.cap.set(cv2.CAP_PROP_FPS,5)
+        self.cam_freq = 5
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        bufsize = self.fps if self.fps <= 10 else 10
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, bufsize)  # set buffer size
+        print('Camera run under %s fps'%(str(self.fps)))        
         self.vid_file_path = '/home/bynav/AI_SGBM/runs/detect/exp/pipe'
         if not os.path.isdir(self.vid_file_path):
             os.mkdir(self.vid_file_path)
@@ -1235,7 +1249,18 @@ class LoadStereoWebcam:  # for inference
 
         # Read frame
         if self.pipe == 0:  # local camera
-            ret_val, img0 = self.cap.read()
+            # ret_val, img0 = self.cap.read()
+            if  self.fps > self.cam_freq:
+                num = int(self.fps/self.cam_freq)
+                n = -1
+                while True:
+                    n += 1
+                    ret_val, img0 = self.cap.read()
+                    if n % num == 0:
+                        if ret_val:
+                            break       
+            else:
+                ret_val, img0 = self.cap.read()     
             # img0 = cv2.flip(img0, 1)  # flip left-right
         else:  # IP camera
             n = 0
@@ -1253,10 +1278,13 @@ class LoadStereoWebcam:  # for inference
         print(f'webcam {self.count}: ', end='')
         
         w = img0.shape[1]
-        h = img0.shape[0]
+        h = img0.shape[0]            
         w1 = int(w/2)
         imgl = img0[:,:w1,:]
         imgr = img0[:,w1:,:]
+        # if self.UMat:
+        #     imgl=cv2.UMat(imgl)
+        #     imgr=cv2.UMat(imgr)
         self.frame += 1
         # Padded resize
         # img = letterbox(img0, self.img_size, stride=self.stride)[0]

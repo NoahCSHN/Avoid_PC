@@ -13,6 +13,7 @@ from models.stereoconfig import stereoCamera
 import os
 from pathlib import Path
 from utils.datasets import letterbox
+from utils.general import timethis,timeblock
 # from pcl import pcl_visualization
  
 
@@ -40,6 +41,7 @@ def undistortion(image, camera_matrix, dist_coeff):
  
 # 获取畸变校正和立体校正的映射变换矩阵、重投影矩阵
 # @param：config是一个类，存储着双目标定的参数:config = stereoconfig.stereoCamera()
+@timethis
 def getRectifyTransform(height, width, config):
     # 读取内参和外参
     left_K = config.cam_matrix_left
@@ -59,6 +61,7 @@ def getRectifyTransform(height, width, config):
  
  
 # 畸变校正和立体校正
+@timethis
 def rectifyImage(image1, image2, map1x, map1y, map2x, map2y):
     rectifyed_img1 = cv2.remap(image1, map1x, map1y, cv2.INTER_AREA)
     rectifyed_img2 = cv2.remap(image2, map2x, map2y, cv2.INTER_AREA)
@@ -183,7 +186,8 @@ def DepthColor2Cloud(points_3d, colors):
     pointcloud_1 = np.delete(pointcloud, remove_idx, 0)
  
     return pointcloud_1
- 
+
+@timethis
 def resize_convert(imgl_rectified, imgr_rectified, imgsz=640, stride=32):
     imgl_rectified = letterbox(imgl_rectified, imgsz, stride=stride)[0]
     imgr_rectified = letterbox(imgr_rectified, imgsz, stride=stride)[0]
@@ -195,22 +199,23 @@ def resize_convert(imgl_rectified, imgr_rectified, imgsz=640, stride=32):
     imgr_rectified = np.ascontiguousarray(imgr_rectified)
     return img_ai, imgl_rectified, imgr_rectified
  
-def Image_Rectification(camera_config, img_left, img_right, imgsz=640, stride=32, path=False, debug=False):
+@timethis
+def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), imgsz=640, stride=32, path=False, UMat=False, debug=False):
     # 读取MiddleBurry数据集的图片
     t0 = time.time()
-    if path:
-        imgl_path=str(Path(img_left).absolute())
-        imgr_path=str(Path(img_right).absolute())
-        iml = cv2.imread(imgl_path)  # left
-        imr = cv2.imread(imgr_path)  # right
-    else:
-        iml = img_left  # left
-        imr = img_right # right        
-    height, width = iml.shape[0:2]
-    
-    # 读取相机内参和外参
-    # config = stereoCamera()
-    config = camera_config
+    with timeblock('read file'):
+        if path:
+            imgl_path=str(Path(img_left).absolute())
+            imgr_path=str(Path(img_right).absolute())
+            iml = cv2.imread(imgl_path)  # left
+            imr = cv2.imread(imgr_path)  # right
+        else:
+            iml = img_left  # left
+            imr = img_right # right           
+        height, width = im0sz
+        # 读取相机内参和外参
+        config = camera_config
+
  
     # 立体校正
     map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
@@ -218,14 +223,13 @@ def Image_Rectification(camera_config, img_left, img_right, imgsz=640, stride=32
     img_ai_raw = iml_rectified
     # 图像缩放
     img_ai, iml_rectified, imr_rectified = resize_convert(iml_rectified, imr_rectified, imgsz, stride)
-    
-    # save for debug
-    # cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/Left1_rectified.bmp', iml_rectified)
-    # cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/Right1_rectified.bmp', imr_rectified)
-    # print(Q)
+
  
     if debug:
     # 绘制等间距平行线，检查立体校正的效果
+        cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/Left1_rectified.bmp', iml_rectified)
+        cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/Right1_rectified.bmp', imr_rectified)  
+        print(Q)           
         line = draw_line(iml_rectified, imr_rectified)
         cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/line.png', line)
  

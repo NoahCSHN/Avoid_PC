@@ -9,7 +9,7 @@ import numpy as np
 from utils.Stereo_Application import stereo_sgbm,SGBM,BM
 from detect import YOLOv5
 from utils.datasets import DataPipline, LoadStereoImages, StereoVideo2pic, LoadStereoWebcam
-from utils.general import set_logging,check_requirements,scale_coords,find_cam
+from utils.general import set_logging,check_requirements,scale_coords,find_cam,timethis
 from utils.img_preprocess import Image_Rectification
 from models.stereoconfig import stereoCamera 
 from pathlib import Path
@@ -17,13 +17,13 @@ main_logger=logging.getLogger(__name__)
 name = [ 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
          'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor' ]
 #
-
+@timethis
 def combination(dataset,camera_config,ai_model,depth_model,
                 ImgL,ImgR,im0s,
                 ImgLabel,ratio,focal,baseline,pixel_size):
     distance=np.zeros((10,7),dtype=float)
     depth=np.zeros((1,),dtype=float) #distance calculate
-    img_left,img_right,img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, imgsz=ai_model.imgsz, stride=ai_model.stride)
+    img_left,img_right,img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride)
     disparity=depth_model.run(img_left,img_right)
     pred=ai_model.detect(dataset,source=img_ai,source_rectified=img_raw,im0s=im0s,
                          iou_thres=0.45,conf_thres=0.25, 
@@ -58,7 +58,7 @@ def initial_platform():
     if opt.webcam:
     #     pipe = find_cam('Lena3d')
     #     assert pipe != None, 'found No webcam'
-        Stereo_Dataset = LoadStereoWebcam(pipe, ai_model.imgsz, ai_model.stride)
+        Stereo_Dataset = LoadStereoWebcam(pipe, ai_model.imgsz, ai_model.stride, UMat=opt.UMat)
     else:
         Stereo_Dataset = LoadStereoImages(source, ai_model.imgsz, ai_model.stride)
     return ai_model,depth_model,config, Stereo_Dataset
@@ -73,14 +73,15 @@ if __name__ == '__main__':
     parser.add_argument('--ratio', type=float, default=0.05, help='object confidence threshold')
     parser.add_argument('--save_path', type=str, default='runs/detect/exp/SGBM', help='camera focal length')
     parser.add_argument('--SGBM', action='store_true', help='Choose SGBM as stereo depth algorithm')
+    parser.add_argument('--UMat', action='store_true', help='Choose UMat as image data format')
     # parser.add_argument('--pixel_size', type=float, default=0.05, help='camera pixel size')
-    parser.add_argument('--weights', type=str, default='runs/train/voc_split/weights/best.pt', help='YOLOv5 model weights')
+    parser.add_argument('--weights', type=str, default='runs/train/exp9/weights/best.pt', help='YOLOv5 model weights')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--img_size', type=int, default=640, help='inference size (pixels)')
     opt = parser.parse_args()
     print(opt)
     check_requirements()
-    logging.basicConfig(level=logging.INFO,force=True)
+    logging.basicConfig(level=logging.WARNING,force=True)
     source, ImgLabel, ratio=opt.source, opt.ImgLabel, opt.ratio
     ai_model,depth_model,camera_config, Stereo_Dataset = initial_platform()
     for path, image_left, image_right, im0s, vid_cap in Stereo_Dataset:
