@@ -4,7 +4,7 @@
 Created on Tue Mar 23 19:29:00 2021
 @author: bynav
 """
-import argparse,logging,time,os
+import argparse,logging,time,os,cv2
 import numpy as np
 from utils.Stereo_Application import stereo_sgbm,SGBM,BM
 from detect import YOLOv5
@@ -23,13 +23,13 @@ def combination(dataset,camera_config,ai_model,depth_model,
                 ImgLabel,ratio,focal,baseline,pixel_size):
     distance=np.zeros((10,7),dtype=float)
     depth=np.zeros((1,),dtype=float) #distance calculate
-    img_left,img_right,img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride)
+    img_left,img_right,img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride,UMat=opt.UMat)
     disparity=depth_model.run(img_left,img_right)
     pred=ai_model.detect(dataset,source=img_ai,source_rectified=img_raw,im0s=im0s,
                          iou_thres=0.45,conf_thres=0.25, 
                          classes=None,augment=False,agnostic_nms=False,
                          disparity=disparity,ratio=ratio,focal=focal,baseline=baseline,pixel_size=pixel_size,
-                         debug=True)
+                         debug=True,save_path=opt.save_path)
     # for i,det in enumerate(pred):
     #     for j,obj in enumerate(det):
     #         cx,cy=((obj[0]+obj[2])/2).round(),((obj[1]+obj[3])/2).round()
@@ -107,5 +107,6 @@ if __name__ == '__main__':
         with open(os.path.join(file_path,str(i)),'w') as f:
             for j in range(len(distance)):
                 f.write(str(distance[j][0])+','+str(distance[j][1])+','+str(distance[j][2])+','+str(distance[j][3])+','+str(distance[j][4])+','+name[int(distance[j][5])]+','+str(distance[j][6])+'\n')
+    cv2.destroyAllWindows()
     logging.info(f'Done.({time.time()-t0:.3f}s)')
     
