@@ -1103,7 +1103,7 @@ class LoadStereoImages:  # for inference
         if '*' in p:
             files = sorted(glob.glob(p, recursive=True))  # glob
         elif os.path.isdir(p):
-            files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
+            files = sorted(glob.glob(os.path.join(p, '*.*')), key=lambda x: int(os.path.basename(x).split('.')[0]))  # dir
         elif os.path.isfile(p):
             files = [p]  # files
         else:
@@ -1216,19 +1216,19 @@ class LoadStereoWebcam:  # for inference
         self.writer = None
         self.cap = cv2.VideoCapture(pipe)  # video capture object
         # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)  # set buffer size
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,2560)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
-        # self.cap.set(cv2.CAP_PROP_FPS,5)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,2560)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,960) #AR0135
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720) #OV9714
-        self.cap.set(cv2.CAP_PROP_FPS,5)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,960)
+        # self.cap.set(cv2.CAP_PROP_FPS,5)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,1280)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,480) #AR0135
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720) #OV9714
+        # self.cap.set(cv2.CAP_PROP_FPS,5)
         self.cam_freq = 5
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         bufsize = self.fps if self.fps <= 10 else 10
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, bufsize)  # set buffer size
         print('Camera run under %s fps'%(str(self.fps)))        
-        self.vid_file_path = '/home/bynav/AI_SGBM/runs/detect/exp/pipe'
+        self.vid_file_path = '/home/bynav/0_code/AI_SGBM/runs/detect/exp/pipe'
         if not os.path.isdir(self.vid_file_path):
             os.mkdir(self.vid_file_path)
         self.new_video('test.avi')
@@ -1275,7 +1275,7 @@ class LoadStereoWebcam:  # for inference
         # Print
         assert ret_val, f'Camera Error {self.pipe}'
         img_path = 'webcam.jpg'
-        print(f'webcam {self.count}: ', end='')
+        # print(f'webcam {self.count}: ', end='')
         
         w = img0.shape[1]
         h = img0.shape[0]            
