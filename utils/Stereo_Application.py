@@ -32,6 +32,14 @@ class BM:
         t0 = time.time()
         BM.count += 1
         self.stereo = cv2.StereoBM_create(48, 9)
+        self.stereo.setUniquenessRatio(40)
+        self.stereo.setTextureThreshold(20)
+        # self.stereo.setROI1(5)
+        # self.stereo.setTextureThreshold(5)
+        # self.stereo.setTextureThreshold(5)
+        # self.stereo.setTextureThreshold(5)
+        # self.stereo.setTextureThreshold(5)
+        # self.stereo.setTextureThreshold(5)
         logging.info(f'\nBM Inital Done. ({time.time() - t0:.3f}s)')
         
     def __del__(self):
@@ -40,6 +48,8 @@ class BM:
     
     def run(self,ImgL,ImgR):
         t0=time.time()
+        ImgL = cv2.cvtColor(ImgL, cv2.COLOR_BGR2GRAY)
+        ImgR = cv2.cvtColor(ImgR, cv2.COLOR_BGR2GRAY)        
         disparity = self.stereo.compute(ImgL,ImgR).astype(np.float32) / 16.0
         logging.info(f'\nBM Done. ({time.time() - t0:.3f}s)')
         return disparity
@@ -54,7 +64,7 @@ class SGBM:
         self.window_size = 3
         self.stereo = cv2.StereoSGBM_create(
             minDisparity=0,
-            numDisparities=48,  # max_disp has to be dividable by 16 f. E. HH 192, 256
+            numDisparities=128,  # max_disp has to be dividable by 16 f. E. HH 192, 256
             blockSize=3,
             P1=8 * 3 * self.window_size ** 2,
             P2=32 * 3 * self.window_size ** 2,
@@ -71,7 +81,7 @@ class SGBM:
         class_name=self.__class__.__name__
         print (class_name,"release")
     
-    @timethis
+    # @timethis
     def run(self,ImgL,ImgR):
         t0 = time.time()
         self.imgL = ImgL
