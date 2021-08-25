@@ -41,13 +41,14 @@ class YOLOv5:
         print (class_name,"release")
     
     #%%% object detect  
-    @timethis  
+    # @timethis  
     def detect(self,
                dataset,source,source_rectified,im0s,iou_thres,conf_thres,
                classes,augment,agnostic_nms,
                disparity,ratio,focal,baseline,pixel_size,
-               debug=False):
+               debug=False,save_path=''):
         t0 = time.time()
+        disparity_color = cv2.applyColorMap(cv2.convertScaleAbs(disparity, alpha=256/128), cv2.COLORMAP_JET)
         distance=np.zeros((10,7),dtype=float)
         depth=np.zeros((1,),dtype=float) #distance calculate
         # for path, img, im0s, vid_cap in self.dataset:
@@ -125,19 +126,18 @@ class YOLOv5:
                 cv2.namedWindow('camera')
                 if dataset.mode == 'image':
                     cv2.imshow('Result',im0)
-                    cv2.waitKey(1000)
-                    cv2.destroyAllWindows()
-                    file_path = '/home/bynav/AI_SGBM/runs/detect/exp/images'
+                    cv2.waitKey(1)
+                    file_path = os.path.join(save_path,'images')
                     if not os.path.isdir(file_path):
-                        os.mkdir(file.path)
-                    save_path = os.path.join(file_path,str(dataset.count)+'.bmp')
-                    cv2.imwrite(save_path, im0)
+                        os.mkdir(file_path)
+                    files = os.path.join(file_path,str(dataset.count)+'.bmp')
+                    # cv2.imwrite(files, im0)
                 elif dataset.mode == 'video' or dataset.mode == 'webcam':
                     dataset.get_vid_dir('/home/bynav/AI_SGBM/runs/detect/exp/video')
-                    dataset.writer.write(im0)
+                    # dataset.writer.write(im0)
                     cv2.imshow('video',im0)
+                    cv2.imshow('disparity',disparity_color)
                 
-        
         distance = distance.tolist()        
         logging.info(f'Detect Done. ({time.time() - t0:.3f}s)')
         return distance # (x1,y1,x2,y2,conf,cls)     
