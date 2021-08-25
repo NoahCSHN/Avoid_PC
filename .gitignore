@@ -1,0 +1,14 @@
+/__pycache__/
+/utils/__pycache__/
+/models/__pycache__/
+/weights/
+/StereoBM_python/
+/stereo_calibration/
+/runs/
+/data/images/
+/data/scripts/
+/data/webimg/
+/.spyproject/
+*.zip
+*.txt
+*.mat
