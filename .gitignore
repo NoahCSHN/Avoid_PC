@@ -12,3 +12,7 @@
 *.zip
 *.txt
 *.mat
+mask.yaml
+yolov5s.pt
+README.md
+tutorial.ipynb
