@@ -26,11 +26,57 @@ import numpy as np
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp']  # acceptable image suffixes
 vid_formats = ['mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv']  # acceptable video suffixes
 
+def get_new_size(img, scale):
+    if type(img) != cv2.UMat:
+        return tuple(map(int, np.array(img.shape[:2][::-1]) * scale))
+    else:
+        return tuple(map(int, np.array(img.get().shape[:2][::-1]) * scale))
+
+def get_max_scale(img, max_w, max_h):
+    if type(img) == cv2.UMat:
+        h, w = img.get().shape[:2]
+    else:
+        h, w = img.shape[:2]
+    scale = min(max_w / w, max_h / h, 1)
+    return scale
+
+class AutoScale:
+    def __init__(self, img, max_w, max_h):
+        self._src_img = img
+        self.scale = get_max_scale(img, max_w, max_h)
+        self._new_size = get_new_size(img, self.scale)
+        self.__new_img = None
+
+    @property
+    def size(self):
+        return self._new_size
+
+    @property
+    def new_img(self):
+        if self.__new_img is None:
+            self.__new_img = cv2.resize(self._src_img, self._new_size, interpolation=cv2.INTER_AREA)
+        return self.__new_img
+
+def letterbox(img, new_wh=(416, 416), color=(114, 114, 114)):
+    a = AutoScale(img, *new_wh)
+    new_img = a.new_img
+    if type(new_img) == cv2.UMat:
+        h, w = new_img.get().shape[:2]
+    else:
+        h, w = new_img.shape[:2]
+    padding = [(new_wh[1] - h)-int((new_wh[1] - h)/2), int((new_wh[1] - h)/2), (new_wh[0] - w)-int((new_wh[0] - w)/2), int((new_wh[0] - w)/2)]
+    # new_img = cv2.copyMakeBorder(new_img, 0, new_wh[1] - h, 0, new_wh[0] - w, cv2.BORDER_CONSTANT, value=color)
+    new_img = cv2.copyMakeBorder(new_img, padding[0], padding[1], padding[2], padding[3], cv2.BORDER_CONSTANT, value=color)
+    # logging.debug(f'image padding: {padding}') #cp3.6
+    logging.debug('image padding: %s',padding) #cp3.5
+    return new_img, (new_wh[0] / a.scale, new_wh[1] / a.scale), padding
+
+
 def StereoVideo2pic(Vsource,Ipath):
     Vdataset = LoadStereoImages(Vsource)
     file_dir = str(Path(Ipath).absolute())
-    left_file_dir = os.path.join(file_dir,'left')
-    right_file_dir = os.path.join(file_dir,'right')
+    left_file_dir = os.path.join(file_dir,'left_416')
+    right_file_dir = os.path.join(file_dir,'right_416')
     if not os.path.isdir(left_file_dir):
         os.makedirs(left_file_dir)
     if not os.path.isdir(right_file_dir):
@@ -111,11 +157,9 @@ class LoadStereoImages:  # for inference
         w1 = round(w/2)
         img0_left = img0[:,:w1,:]
         img0_right = img0[:,w1:,:]
-        # img_ai = letterbox(img0_left, self.img_size, stride=self.stride)[0]
+        img0_left = letterbox(img0_left,(416,416))[0]
+        img0_right = letterbox(img0_right,(416,416))[0]
 
-        # Convert
-        # img_ai = img_ai[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        # img_ai = np.ascontiguousarray(img_ai)
 
         return path, img0_left, img0_right, img0_left.shape, self.cap
 
