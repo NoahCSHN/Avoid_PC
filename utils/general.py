@@ -588,7 +588,7 @@ def timethis(func):
         start = time.perf_counter()
         r = func(*args, **kwargs)
         end = time.perf_counter()
-        print('{}.{} : {}'.format(func.__module__, func.__name__, end - start))
+        print('{}.{} : {}'.format(func.__module__, func.__name__, end - start),end='\r')
         return r
     return wrapper
 
