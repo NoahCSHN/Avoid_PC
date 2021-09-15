@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <a href="https://apps.apple.com/app/id1452689527" target="_blank">
 <img src="https://user-images.githubusercontent.com/26833433/98699617-a1595a00-2377-11eb-8145-fc674eb9b1a7.jpg" width="1000"></a>
 &nbsp
@@ -150,3 +151,8 @@ For business inquiries and professional support requests please visit us at http
 ## Contact
 
 **Issues should be raised directly in the repository.** For business inquiries or professional support requests please visit https://www.ultralytics.com or email Glenn Jocher at glenn.jocher@ultralytics.com. 
+=======
+# Avoid_PC
+Avoid model running on PC
+combine opencv SGBM and YOLOv5 to detect objects with its distance.
+>>>>>>> 83a595359216a36811080860c016a25fb9436fdb
