@@ -8,23 +8,33 @@ Created on Wed Mar 31 10:53:09 2021
 
 # Dataset utils and dataloaders
 
-import glob
-import logging
-import math
-import os
-import random
-import shutil
-import time
-from itertools import repeat
-from multiprocessing.pool import ThreadPool
+import glob,argparse,logging,os
+from datetime import datetime
 from pathlib import Path
-from threading import Thread
 
 import cv2
 import numpy as np
 
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp']  # acceptable image suffixes
 vid_formats = ['mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv']  # acceptable video suffixes
+
+def confirm_dir(root_path,new_path):
+    """
+    @description  :make sure path=(root_path/new_path) exist
+    ---------
+    @param  :
+        root_path: type string, 
+        new_path: type string,
+    -------
+    @Returns  :
+    -------
+    """
+    
+    
+    path = os.path.join(root_path,new_path)
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    return path
 
 def get_new_size(img, scale):
     if type(img) != cv2.UMat:
@@ -71,31 +81,16 @@ def letterbox(img, new_wh=(416, 416), color=(114, 114, 114)):
     logging.debug('image padding: %s',padding) #cp3.5
     return new_img, (new_wh[0] / a.scale, new_wh[1] / a.scale), padding
 
-
-def StereoVideo2pic(Vsource,Ipath):
-    Vdataset = LoadStereoImages(Vsource)
-    file_dir = str(Path(Ipath).absolute())
-    left_file_dir = os.path.join(file_dir,'left_416')
-    right_file_dir = os.path.join(file_dir,'right_416')
-    if not os.path.isdir(left_file_dir):
-        os.makedirs(left_file_dir)
-    if not os.path.isdir(right_file_dir):
-        os.makedirs(right_file_dir)
-    i = 0
-    for path, image_left, image_right, im0s, vid_cap in Vdataset:
-        imgl_path=os.path.join(left_file_dir, str(i)+'_left.png')
-        imgr_path=os.path.join(right_file_dir, str(i)+'_right.png')
-        cv2.imwrite(imgl_path, image_left)
-        cv2.imwrite(imgr_path,image_right)
-        i += 1
-
 class LoadStereoImages:  # for inference
     def __init__(self, path, img_size=640, stride=32):
         p = str(Path(path).absolute())  # os-agnostic absolute path
         if '*' in p:
             files = sorted(glob.glob(p, recursive=True))  # glob
         elif os.path.isdir(p):
-            files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
+            try:
+                files = sorted(glob.glob(os.path.join(p,'*.*')),key=lambda x: int(os.path.basename(x).split('.')[0])) #dir
+            except:
+                files = sorted(glob.glob(os.path.join(p, '*.*')))  # dir
         elif os.path.isfile(p):
             files = [p]  # files
         else:
@@ -171,5 +166,32 @@ class LoadStereoImages:  # for inference
     def __len__(self):
         return self.nf  # number of files
     
+def StereoVideo2pic(Vsource,Ipath,image_size=416):
+    Vdataset = LoadStereoImages(Vsource,img_size=image_size)
+    file_dir = str(Path(Ipath).absolute())
+    left_file_dir = os.path.join(file_dir,'left_416')
+    right_file_dir = os.path.join(file_dir,'right_416')
+    if not os.path.isdir(left_file_dir):
+        os.makedirs(left_file_dir)
+    if not os.path.isdir(right_file_dir):
+        os.makedirs(right_file_dir)
+    i = 0
+    for path, image_left, image_right, im0s, vid_cap in Vdataset:
+        imgl_path=os.path.join(left_file_dir, str(i)+'_left.png')
+        imgr_path=os.path.join(right_file_dir, str(i)+'_right.png')
+        cv2.imwrite(imgl_path, image_left)
+        cv2.imwrite(imgr_path,image_right)
+        i += 1
+
 if __name__ == '__main__':
-    StereoVideo2pic(Vsource = '/home/bynav/AI_SGBM/data/images/yyc/stereo_test/calib', Ipath = '/home/bynav/AI_SGBM/data/images/yyc/stereo_test')
+    parser = argparse.ArgumentParser()
+    # camera parameters configuration
+    parser.add_argument('--source', type=str, default='../data/images/indoor', help='integrated image from stereo camera')
+    parser.add_argument('--save_path', type=str, default='../data/calibration', help='real time camera')
+    parser.add_argument('--image_size',type=int,default=416,help='image size read in')
+    opt = parser.parse_args()
+    save_path = confirm_dir(opt.save_path,datetime.now().strftime("%Y%m%d"))
+    save_path = confirm_dir(save_path,datetime.now().strftime("%Y%m%d%H%M%S"))
+    StereoVideo2pic(Vsource = opt.source, 
+                    Ipath = save_path,
+                    image_size=opt.image_size)

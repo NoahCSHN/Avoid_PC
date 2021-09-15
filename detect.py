@@ -43,15 +43,12 @@ class YOLOv5:
     #%%% object detect  
     # @timethis  
     def detect(self,
-               dataset,source,source_rectified,im0s,iou_thres,conf_thres,
+               source,source_rectified,im0s,iou_thres,conf_thres,
                classes,augment,agnostic_nms,
-               disparity,ratio,focal,baseline,pixel_size,
-               debug=False,save_path=''):
-        t0 = time.time()
-        disparity_color = cv2.applyColorMap(cv2.convertScaleAbs(disparity, alpha=256/128), cv2.COLORMAP_JET)
-        distance=np.zeros((10,7),dtype=float)
-        depth=np.zeros((1,),dtype=float) #distance calculate
-        # for path, img, im0s, vid_cap in self.dataset:
+               queue,debug=False):
+        # disparity_color = cv2.applyColorMap(cv2.convertScaleAbs(disparity, alpha=256/128), cv2.COLORMAP_JET)
+        # distance=np.zeros((10,7),dtype=float)
+        # depth=np.zeros((1,),dtype=float) #distance calculate
         img = source
         if debug:
             # im0 = img.transpose(1,2,0)
@@ -65,119 +62,22 @@ class YOLOv5:
             
         # Get names and colors
         names = self.model.module.names if hasattr(self.model, 'module') else self.model.names
-        colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
+        # colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
             
         # Inference
-        # t1 = time_synchronized()
         pred = self.model(img, augment=augment)[0]
         
         # Apply NMS
         pred = non_max_suppression(pred, conf_thres, iou_thres, classes=classes, agnostic=agnostic_nms)
+        # pred = pred.numpy()
         # t2 = time_synchronized()
-        
         # Apply Classifier
         # if classify:
-        #     pred = apply_classifier(pred, modelc, img, im0s)
-        # Process detections
-        for i, det in enumerate(pred):  # detections per image
-        #%%%% TODO: 将一张图片的预测框逐条分开，并且还原到原始图像尺寸
-            if len(det):
-                # Rescale boxes from img_size to im0 size
-                det_resize = det.clone().detach()
-                det_resize[:,:4] = scale_coords(img.shape[2:], det_resize[:, :4], im0.shape).round()
-                for j,obj in enumerate(det):
-        #%%%% TODO: 分9个图像框
-                    dx,dy=((obj[2]-obj[0])*ratio).round(),((obj[3]-obj[1])*ratio).round()
-                    cx,cy=((obj[0]+obj[2])/2).round(),((obj[1]+obj[3])/2).round()
-                    dw,dh=int((obj[2]-obj[0])/6),int((obj[3]-obj[1])/6)
-                    cxcy=[(cx-2*dw,cy-2*dh),(cx,cy-2*dh),(cx+2*dw,cy-2*dh),\
-                          (cx-2*dw,cy),(cx,cy),(cx+2*dw,cy),\
-                          (cx-2*dw,cy+2*dh),(cx,cy+2*dh),(cx+2*dw,cy+2*dh)]
-                    
-        #%%%% TODO: 每个框计算深度均值
-                    temp = np.zeros((9,),dtype=float)
-                    k = 0
-                    for m,n in cxcy:
-                        temp[k] = disparity_centre(m, n, dx, dy, disparity, focal, baseline, pixel_size)
-                        k += 1
-        
-        #%%%% TODO: 取众多框计算值的中位数
-                    temp = np.sort(temp)
-                    depth[0] = temp[4]
-                    distance[j,:]=np.concatenate((obj.cpu().numpy(),depth),axis=0)
-                                        
-        #%%%% TODO: 将最终深度结果画到图像里
-                    if debug:
-                        xyxy = [det_resize[j,0],det_resize[j,1],det_resize[j,2],det_resize[j,3]]
-                        label = f'{names[int(obj[5])]} {obj[4]:.2f}'
-                        plot_one_box(xyxy, im0, label=label, color=colors[int(obj[5])], line_thickness=2)
-                        xyxy = [int((det_resize[j,0]+det_resize[j,2])/2)-2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
-                                int((det_resize[j,1]+det_resize[j,3])/2)-2*int((det_resize[j,3]-det_resize[j,1])*ratio),\
-                                    int((det_resize[j,0]+det_resize[j,2])/2)+2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
-                                        int((det_resize[j,1]+det_resize[j,3])/2)+2*int((det_resize[j,3]-det_resize[j,1])*ratio)]
-                        label = f'{depth[0]:.2f}'
-                        plot_one_box(xyxy, im0, label=label, color=colors[int(obj[5])], line_thickness=1)
-        
-        #%%%% TODO: 保存结果
-                distance=np.asarray(distance[:j+1,:]).reshape(-1,7)
-                distance = torch.from_numpy(distance)
-                distance[:, :4] = det_resize[:,:4]
-            if debug:
-                cv2.namedWindow('camera')
-                if dataset.mode == 'image':
-                    cv2.imshow('Result',im0)
-                    cv2.waitKey(1)
-                    file_path = os.path.join(save_path,'images')
-                    if not os.path.isdir(file_path):
-                        os.mkdir(file_path)
-                    files = os.path.join(file_path,str(dataset.count)+'.bmp')
-                    # cv2.imwrite(files, im0)
-                elif dataset.mode == 'video' or dataset.mode == 'webcam':
-                    dataset.get_vid_dir('/home/bynav/AI_SGBM/runs/detect/exp/video')
-                    # dataset.writer.write(im0)
-                    cv2.imshow('video',im0)
-                    cv2.imshow('disparity',disparity_color)
-                
-        distance = distance.tolist()        
-        logging.info(f'Detect Done. ({time.time() - t0:.3f}s)')
-        return distance # (x1,y1,x2,y2,conf,cls)     
+        #     pred = apply_classifier(pred, modelc, img, im0s)        
+        # queue.put((pred,names))
+        return (pred,names)
+   
 
-'''          
-                    cx,cy=((obj[0]+obj[2])/2).round(),((obj[1]+obj[3])/2).round()
-                    dx,dy=((obj[2]-obj[0])*ratio).round(),((obj[3]-obj[1])*ratio).round()
-                    depth = disparity_centre(cx, cy, dx, dy, disparity, focal, baseline, pixel_size)
-                    distance[j,:]=np.concatenate((obj.cpu().numpy(),depth),axis=0)
-                    if debug:
-                        xyxy = [det_resize[j,0],det_resize[j,1],det_resize[j,2],det_resize[j,3]]
-                        label = f'{names[int(obj[5])]} {obj[4]:.2f}'
-                        plot_one_box(xyxy, im0, label=label, color=colors[int(obj[5])], line_thickness=2)
-                        xyxy = [int((det_resize[j,0]+det_resize[j,2])/2)-2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
-                                int((det_resize[j,1]+det_resize[j,3])/2)-2*int((det_resize[j,3]-det_resize[j,1])*ratio),\
-                                    int((det_resize[j,0]+det_resize[j,2])/2)+2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
-                                        int((det_resize[j,1]+det_resize[j,3])/2)+2*int((det_resize[j,3]-det_resize[j,1])*ratio)]
-                        label = f'{depth[0]:.2f}'
-                        plot_one_box(xyxy, im0, label=label, color=colors[int(obj[5])], line_thickness=1)
-            if debug:
-                if dataset.mode == 'image':
-                    cv2.imshow('Result',im0)
-                    cv2.waitKey(1000)
-                    cv2.destroyAllWindows() 
-                    file_path = '/home/bynav/AI_SGBM/runs/detect/exp/images'
-                    if not os.path.isdir(file_path):
-                        os.mkdir(file.path)
-                    save_path = os.path.join(file_path,str(dataset.count)+'.bmp')
-                    cv2.imwrite(save_path, im0)
-                elif dataset.mode == 'video':
-                    dataset.get_vid_dir('/home/bynav/AI_SGBM/runs/detect/exp/video')
-                    dataset.writer.write(im0)
-                    
-                distance=np.asarray(distance[:j+1,:]).reshape(-1,7)
-                distance = torch.from_numpy(distance)
-                distance[:, :4] = det_resize[:,:4]
-                distance = distance.tolist()                
-        logging.info(f'Detect Done. ({time.time() - t0:.3f}s)')
-        return distance # (x1,y1,x2,y2,conf,cls)        
-'''
 #%% main YOLOv5 implementation
 def YOLO_detect(save_img=False,
            source='data/images/left.png',

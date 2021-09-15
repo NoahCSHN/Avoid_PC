@@ -14,5 +14,9 @@
 *.mat
 mask.yaml
 yolov5s.pt
-README.md
 tutorial.ipynb
+*.png
+*.jpg
+*.avi
+*.bmp
+*.m~

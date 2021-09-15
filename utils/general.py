@@ -4,8 +4,9 @@ import glob,functools,logging,math,os,platform,random,re,subprocess,time
 from pathlib import Path
 from subprocess import PIPE,Popen
 from contextlib import contextmanager
+from enum import Enum
 
-import cv2
+import cv2,socket,sys
 import numpy as np
 import torch
 import torchvision
@@ -600,3 +601,209 @@ def timeblock(label):
     finally:
         end = time.perf_counter()
         print('{} : {}'.format(label, end - start))
+
+class calib_type(Enum):
+    """
+    @description  : camera type for image rectification
+    ---------
+    @function  : sequence the camera type by number
+    -------
+    """
+    OV9714_1280_720 = 0
+    AR0135_1280_720 = 1
+    AR0135_1280_960 = 2
+    AR0135_416_416  = 3
+    AR0135_640_640  = 4
+    AR0135_640_480  = 5
+    MIDDLEBURY_416  = 6
+class camera_mode:
+    """
+    @description  : camera mode for image rectification
+    ---------
+    @function  : give each calib type a image size for rectification
+    -------
+    """
+    def __init__(self,mode):
+        if mode == 0:
+            self.mode=calib_type.OV9714_1280_720
+            self.size=(1280,720)
+        elif mode == 1:
+            self.mode=calib_type.AR0135_1280_720
+            self.size=(1280,720)
+        elif mode == 2:
+            self.mode=calib_type.AR0135_1280_960
+            self.size=(1280,960)
+        elif mode == 3:
+            self.mode=calib_type.AR0135_416_416
+            self.size=(416,416)
+        elif mode == 4:
+            self.mode=calib_type.AR0135_640_640
+            self.size=(640,640)
+        elif mode == 5:
+            self.mode=calib_type.AR0135_640_480
+            self.size=(640,480)
+        else:
+            self.mode=calib_type.MIDDLEBURY_416
+            self.size=(1280,960)
+
+class socket_client():
+    """
+    @description  : handle tcp event
+    ---------
+    @function  :
+    -------
+    """
+    
+    
+    def __init__(self,address=('192.168.3.181',9191)):
+        """
+        @description  : obtain and save the tcp client address
+        ---------
+        @param  : address: server address, in default taple format
+        -------
+        @Returns  : None
+        -------
+        """
+        self.address = address
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect(self.address)
+            print('connect to: ',address)
+        except socket.error as msg:
+            self.sock = None
+            print(msg)
+            sys.exit(1)         
+    
+    # @timethis
+    def send(self,image,disparity,padding,coords,frame,imgsz=(416,416),quality=0.5,debug=False):
+        """
+        @description  : send a packet to tcp server
+        ---------
+        @param  : image: the cv2 image mat (imgsz[0],imgsz[1])
+        @param  : coords: the coords of the opposite angle of the object rectangle,(n,(x1,y1,z1,x2,y2,z2))
+        @param  : frame: frame number of the pipe stream
+        @param  : imgsz: the image resolution(height,width), reserved
+        @param  : quality: type float ,in the range [0,1], reserved
+        @param  : debug: type bool, if true, add a image in imgsz shape to tcp transmission packet
+        -------
+        @Returns  : None
+        -------
+        """
+        
+        answer = []
+        if debug:
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), int(quality*100)]
+            ## 首先对图片进行编码，因为socket不支持直接发送图片
+            stringData = np.ravel(image)
+            stringData = stringData[padding[0]*imgsz[0]*3:(padding[0]+312)*imgsz[0]*3]       
+            disparity = np.ravel(disparity)
+            disparity = disparity[padding[0]*imgsz[0]:(padding[0]+312)*imgsz[0]]
+            minVal = np.amin(disparity)
+            maxVal = np.amax(disparity)
+            disparity = np.reshape(disparity,(312,416))
+            disparity_color = cv2.applyColorMap(cv2.convertScaleAbs(disparity, alpha=255.0/(maxVal-minVal),beta=-minVal*255.0/(maxVal-minVal)), cv2.COLORMAP_JET)
+            colorsz = disparity_color.shape
+            ## 首先发送图片编码后的长度
+            header='$Image,'+str(len(stringData))+','+str(len(np.ravel(disparity_color)))+','+str(312)+','+str(416)+','+str(colorsz[0])+','+str(colorsz[1])+','+str(coords[0][0])+','+str(coords[0][1])+','+str(frame)
+            self.sock.sendall(header.encode('utf-8').ljust(64)) 
+            while answer != 'Ready for Image':
+                answer = self.sock.recv(32).decode('utf-8')
+            self.sock.sendall(stringData)
+            while answer != 'Ready for Disparity Image':
+                answer = self.sock.recv(64).decode('utf-8')
+            self.sock.sendall(np.ravel(disparity_color))
+        else:
+            header='$Image,'+str('0')+','+str(coords[0][0])+','+str(coords[0][1])
+            self.sock.sendall(header.encode('utf-8').ljust(32))
+        while answer != 'Ready for Coordinates':
+            answer = self.sock.recv(32).decode('utf-8')
+
+        coordData = '$Coord'
+        for item in coords[1:]:
+            coordData += ','
+            coordData += str(item[1])
+            coordData += ','
+            coordData += str(item[2])
+            coordData += ','
+            coordData += str(item[5])
+            coordData += ','
+            coordData += str(item[3])
+            coordData += ','
+            coordData += str(item[4])
+            coordData += ','
+            coordData += str(item[5])
+        coordData += ',*FC'
+        ## 然后发送编码的内容
+        self.sock.sendall(coordData.encode('utf-8'))
+        while answer != 'Ready for next Frame':
+            answer = self.sock.recv(32).decode('utf-8')
+    
+    def close(self):
+        if self.sock:
+            print('closing tcp client ...')
+            self.sock.close()
+    
+    def __del__(self):
+        self.close()
+
+def matching_points_gen(disparity,img_left,img_right,left_points=[],padding=[]):
+    """
+    @description  : get the left image points and draw a line between the original point in the image_left and matching point in the image_right
+    ---------
+    @param  : disparity: type matrix, the disparity map of the image_left and image_right
+    @param  : image_left: type matrix, the raw image from the left camera
+    @param  : image_right: type matrix, the raw image from the right camera
+    @param  : left_points: type list, the point in the image_left
+    -------
+    @Returns  : the image with matching points line in it
+    -------
+    """
+    merge = cv2.hconcat([img_left,img_right])
+    if left_points == []:
+        return merge
+    
+    # %% 加点
+    raw_points = []
+    for i in range(int(len(left_points)/2)):
+        add_point = [int((left_points[2*i][0]+left_points[2*i+1][0])/2),int((left_points[2*i][1]+left_points[2*i+1][1])/2)]
+        raw_points.append(left_points[2*i])
+        raw_points.append(add_point)
+        raw_points.append(left_points[2*i+1])
+
+    # %% 划线
+    for point in raw_points:
+        # print(padding[0])
+        first_matching_point = [point[1]-1+416-padding[0],point[0]-1]
+        first_point = [point[1]-1-padding[0],point[0]-1]
+        cv2.line(merge,first_point,first_matching_point,color=(0,255,0),thickness=1,lineType=cv2.LINE_8)    
+        sec_matching_point = [int(point[1]-1+416-disparity[point[1]-1,point[0]-1])-padding[0],point[0]-1]
+        sec_point = [point[1]-1+416-padding[0],point[0]-1]
+        cv2.line(merge,sec_point,sec_matching_point,color=(0,255,0),thickness=2,lineType=cv2.LINE_8)    
+    return merge
+
+def confirm_dir(root_path,new_path):
+    """
+    @description  :make sure path=(root_path/new_path) exist
+    ---------
+    @param  :
+        root_path: type string, 
+        new_path: type string,
+    -------
+    @Returns  :
+    -------
+    """
+    
+    
+    path = os.path.join(root_path,new_path)
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    return path
+
+def video_writer(self, w=2560,h=960,fps=30,save_path=''):
+    assert save_path,f"save path invalid {save_path}"
+    fourcc = 'mp4v'  # output video codec
+    w = int(w/2)
+    h = int(h)
+    save_path = confirm_dir(save_path,"raw_left_camera_video")
+    writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
+    return writer

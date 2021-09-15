@@ -1,16 +1,24 @@
-# Dataset utils and dataloaders
-
+'''
+Author: your name
+Date: 2021-04-06 08:55:03
+LastEditTime: 2021-09-11 20:11:53
+LastEditors: Please set LastEditors
+Description: In User Settings Edit
+FilePath: /AI_SGBM/utils/datasets.py
+'''
 import glob
 import logging
 import math
 import os
 import random
 import shutil
+from subprocess import run
 import time
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from threading import Thread
+import threading
 
 import cv2
 import numpy as np
@@ -34,6 +42,41 @@ logger = logging.getLogger(__name__)
 for orientation in ExifTags.TAGS.keys():
     if ExifTags.TAGS[orientation] == 'Orientation':
         break
+
+class DATASET_NAMES():
+    """
+    @description  :pre define the object class name for object detection
+    ---------
+    @function  : None
+    -------
+    """
+    
+    voc_names = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
+         'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
+    coco_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+                    'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+                    'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+                    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+                    'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+                    'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+                    'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+                    'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
+                    'hair drier', 'toothbrush']
+    masks_names = ['mask','nomask']
+    voc_split_names = ['bottle','chair','diningtable','person','pottedplant','sofa','tvmonitor']
+    coco_split_names = ['person','sports ball','bottle','cup','chair','potted plant','cell phone', 'book']
+    name_color = [[246, 252, 48],[38, 9, 129],[235, 204, 85],[51, 148, 36],[68, 154, 71],[77, 204, 64],[142, 183, 11],
+                  [76, 224, 194],[62, 211, 108],[87, 182, 84],[217, 236, 51],[83, 160, 30],[136, 38, 28],[157, 71, 128],
+                  [166, 144, 72],[142, 82, 203],[161, 110, 0],[179, 75, 107],[241, 31, 58],[188, 179, 151],[6, 141, 72],
+                  [34, 65, 134],[248, 200, 119],[98, 14, 74],[108, 42, 45],[65, 253, 19],[41, 70, 255],[72, 54, 7],
+                  [86, 8, 97],[106, 129, 218],[59, 147, 175],[234, 40, 195],[92, 42, 230],[236, 173, 62],[144, 190, 177],
+                  [18, 181, 241],[247, 59, 100],[212, 181, 95],[143, 117, 204],[30, 46, 171],[86, 254, 78],[82, 124, 249],
+                  [142, 236, 83],[193, 223, 226],[198, 202, 19],[101, 171, 24],[212, 147, 16],[55, 73, 49],[104, 91, 136],
+                  [205, 89, 132],[42, 103, 28],[109, 60, 150],[250, 216, 158],[211, 132, 120],[188, 40, 169],[92, 12, 162],
+                  [107, 64, 221],[149, 174, 193],[126, 54, 154],[88, 107, 46],[115, 128, 33],[73, 202, 252],[1, 224, 125],
+                  [9, 55, 163],[66, 145, 204],[61, 248, 181],[220, 238, 17],[53, 26, 250],[162, 156, 200],[240, 117, 64],
+                  [53, 65, 194],[17, 146, 93],[197, 199, 158],[64, 54, 35],[188, 183, 177],[206, 17, 174],[34, 155, 144],
+                  [142, 123, 110],[211, 17, 89],[54, 38, 67]]
 
 
 def get_hash(files):
@@ -1060,42 +1103,30 @@ def autosplit(path='../coco128', weights=(0.9, 0.1, 0.0), annotated_only=False):
 
 
 '''-----------------------------Noah Defined-----------------------------'''
-class DataPipline():
-    'Noah defined Image data pipline for image rectification -> AI&SGBM -> object depth output module'
-    def __init__(self,lpath,rpath,imgsz,stride):
-        self.origi_lpath=str(Path(lpath).absolute())
-        self.origi_rpath=str(Path(rpath).absolute())
-        self.imgsz=imgsz
-        self.stride=stride
-        self.mode='image'      # image, video, camera
-    
-    def __iter__(self):
-        self.count = 0
-        
-    def __next__(self):
-        return
-        
-    def img_to_preprocess(self):
-        return self.origi_lpath,self.origi_rpath
-    
-    def get_rectified_img(self,imgl_rectified,imgr_rectified, imgl_rectified_rgb):
-        self.imgl_rectified = imgl_rectified
-        self.imgr_rectified = imgr_rectified
-        self.img_ai = imgl_rectified_rgb
-    
-    def img_to_ai(self):
-        # Padded resize
-        img0 = self.img_ai.shape
-        img = letterbox(self.img_ai, self.imgsz, stride=self.stride)[0]
+'''
+description: image and other imformation exchange pipe between multi-thread 
+param {*}
+return {*}
+'''
+class image_pipe():
+    def __init__(self):
+        self.timestampe = 0.
+        self.frame = 0
+        self.valid = False
+        self.lock = threading.Lock()
 
-        # Convert
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        img = np.ascontiguousarray(img)
-
-        return img, img0
+    def put(self,image,timestamp,frame):
+        with self.lock:
+            self.image = image
+            self.frame = frame
+            self.timestampe = timestamp
+            self.valid = True
         
-    def img_to_sgbm(self):
-        return 
+    def get(self):
+        with self.lock:
+            valid = self.valid
+            self.valid = False
+            return self.image,self.timestampe,self.frame,valid
 
 class LoadStereoImages:  # for inference
     def __init__(self, path, img_size=640, stride=32):
@@ -1202,7 +1233,7 @@ class LoadStereoImages:  # for inference
 
 
 class LoadStereoWebcam:  # for inference
-    def __init__(self, pipe='0', img_size=640, stride=32, UMat=False):
+    def __init__(self, pipe='0', fps=30, img_size=640, stride=32, UMat=False):
         self.UMat = UMat
         self.img_size = img_size
         self.stride = stride
@@ -1214,99 +1245,68 @@ class LoadStereoWebcam:  # for inference
 
         self.pipe = pipe
         self.writer = None
-        self.cap = cv2.VideoCapture(pipe)  # video capture object
-        # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)  # set buffer size
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,2560)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,960)
-        # self.cap.set(cv2.CAP_PROP_FPS,5)
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,1280)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,480) #AR0135
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT,720) #OV9714
-        # self.cap.set(cv2.CAP_PROP_FPS,5)
-        self.cam_freq = 5
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        bufsize = self.fps if self.fps <= 10 else 10
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, bufsize)  # set buffer size
-        print('Camera run under %s fps'%(str(self.fps)))        
-        self.vid_file_path = '/home/bynav/0_code/AI_SGBM/runs/detect/exp/pipe'
-        if not os.path.isdir(self.vid_file_path):
-            os.mkdir(self.vid_file_path)
-        self.new_video('test.avi')
+        self.__cap = cv2.VideoCapture(pipe)  # video capture object
+        self.__cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # set buffer size
+        self.__cap.set(cv2.CAP_PROP_FRAME_WIDTH,2560)
+        self.__cap.set(cv2.CAP_PROP_FRAME_HEIGHT,960)
+        self.__cap.set(cv2.CAP_PROP_FPS,fps)
+        self.cam_freq = self.__cap.get(cv2.CAP_PROP_FPS)
+        self.fps = fps
+        print('Camera run under (%s, %s), %s fps'%(str(2560),str(960),str(self.fps)))
         self.mode = 'webcam'
+        self.frame = -1
+        self.time = -1
+        self.frame_valid = False
+        self.cam_start = False
+        self.pipeline = image_pipe()
+        self.__thread = Thread(target=self.__update,args=[],daemon=True)
+        self.__thread.start()
+
+    def __update(self):
+        while True:
+            self.frame += 1
+            timestampe = time.time() - 0.044
+            ret_val, img = self.__cap.read()
+            assert ret_val,f"Camera Error {self.pipe}"
+            self.pipeline.put(img,timestampe,self.frame)
+            if not self.cam_start:
+                self.cam_start = True
 
     def __iter__(self):
         self.count = -1
-        self.frame = 0
         return self
 
     def __next__(self):
-        self.count += 1
-        if cv2.waitKey(1) == ord('q'):  # q to quit
-            self.cap.release()
-            self.writer.release()
-            cv2.destroyAllWindows()
-            raise StopIteration
-
-        # Read frame
-        if self.pipe == 0:  # local camera
-            # ret_val, img0 = self.cap.read()
-            if  self.fps > self.cam_freq:
-                num = int(self.fps/self.cam_freq)
-                n = -1
-                while True:
-                    n += 1
-                    ret_val, img0 = self.cap.read()
-                    if n % num == 0:
-                        if ret_val:
-                            break       
-            else:
-                ret_val, img0 = self.cap.read()     
-            # img0 = cv2.flip(img0, 1)  # flip left-right
-        else:  # IP camera
-            n = 0
-            while True:
-                n += 1
-                self.cap.grab()
-                if n % 30 == 0:  # skip frames
-                    ret_val, img0 = self.cap.retrieve()
-                    if ret_val:
-                        break
-
-        # Print
-        assert ret_val, f'Camera Error {self.pipe}'
-        img_path = 'webcam.jpg'
-        # print(f'webcam {self.count}: ', end='')
-        
+        runtime = time.time() - self.time
+        if runtime < 1/self.cam_freq:
+            time.sleep(round(1/self.cam_freq-runtime,3))
+        while True:
+            if self.cam_start:
+                img0,timestamp,frame,valid = self.pipeline.get()
+                if valid:
+                    self.count += 1
+                    break
         w = img0.shape[1]
-        h = img0.shape[0]            
+        h = img0.shape[0]
         w1 = int(w/2)
         imgl = img0[:,:w1,:]
         imgr = img0[:,w1:,:]
         # if self.UMat:
         #     imgl=cv2.UMat(imgl)
         #     imgr=cv2.UMat(imgr)
-        self.frame += 1
         # Padded resize
         # img = letterbox(img0, self.img_size, stride=self.stride)[0]
-
         # Convert
         # img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
         # img = np.ascontiguousarray(img)
+        self.time = time.time()
+        return imgl, imgr, (h,w1), None
 
-        return img_path, imgl, imgr, (h,w1), None
-
-    def get_vid_dir(self,path):
-        self.vid_file_path = path
-        
-    def new_video(self, path):
-        if isinstance(self.writer, cv2.VideoWriter):
-            self.writer.release()
-        fps = self.cap.get(cv2.CAP_PROP_FPS)
-        fourcc = 'mp4v'  # output video codec
-        w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2)
-        h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        save_path = os.path.join(self.vid_file_path, path)
-        self.writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
+    def get_camera_config(self):
+        width = self.__cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        height = self.__cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        fps = self.__cap.get(cv2.CAP_PROP_FPS)
+        return width,height,fps
 
     def __len__(self):
         return 0
