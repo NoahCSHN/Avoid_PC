@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-08 16:03:30
-LastEditTime: 2021-09-11 20:26:47
+LastEditTime: 2021-09-16 17:05:36
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /AI_SGBM/combination.py
@@ -30,9 +30,9 @@ def image_process(camera_config,ai_model,depth_model,
                   ImgLabel,ratio,
                   disparity_queue,pred_queue):
     
-    distance=np.zeros((10,7),dtype=float)
+    distance=np.zeros((10,6),dtype=float)
     # depth=np.zeros((1,),dtype=float) #distance calculate
-    img_left, img_right, img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride,UMat=opt.UMat)
+    img_left, img_right, img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride,UMat=opt.UMat, debug=opt.debug)
     disparity, color_3d = depth_model.run(img_left,img_right,camera_config.Q,disparity_queue,opt.UMat,opt.filter)
     pred, names = ai_model.detect(img_ai,img_raw,im0s,0.45,0.25, None,False,False, pred_queue,opt.debug)
     # sm_t = Thread(target=depth_model.run,args=(img_left,img_right,camera_config.Q,disparity_queue,opt.UMat,opt.filter))
@@ -50,9 +50,11 @@ def image_process(camera_config,ai_model,depth_model,
 #%% TODO: 将一张图片的预测框逐条分开，并且还原到原始图像尺寸
         if len(det):
             # Rescale boxes from img_size to im0 size
-            # det_resize = det.clone().detach()
-            det_resize = np.copy(det)
-            det_resize[:,:4] = scale_coords(img_ai.shape[2:], det_resize[:, :4], img_raw.shape).round()
+            det_resize = det.clone().detach()
+            print(det_resize.shape)
+            print(det_resize)
+            # det_resize = np.copy(det)
+            det_resize[:,:4] = scale_coords(img_ai.shape, det_resize[:, :4], img_raw.shape).round()
             for j,obj in enumerate(det):
                 temp_dis=disparity_centre(obj, ratio, disparity, color_3d[:,:,2],camera_config.focal_length, camera_config.baseline, camera_config.pixel_size, opt.sm_mindi)
                 
@@ -60,16 +62,17 @@ def image_process(camera_config,ai_model,depth_model,
                 # if debug:
                 xyxy = [det_resize[j,0],det_resize[j,1],det_resize[j,2],det_resize[j,3]]
                 label = f'{names[int(obj[5])]} {obj[4]:.2f}:{temp_dis:.2f}'
-                plot_one_box(xyxy, img_raw, label=label, color=DATASET_NAMES.name_color[DATASET_NAMES.voc_names.index(label)], line_thickness=2)
+                plot_one_box(xyxy, img_raw, label=label, color=DATASET_NAMES.name_color[DATASET_NAMES.voc_names.index(names[int(obj[5])])], line_thickness=2)
                     # xyxy = [int((det_resize[j,0]+det_resize[j,2])/2)-2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
                     #         int((det_resize[j,1]+det_resize[j,3])/2)-2*int((det_resize[j,3]-det_resize[j,1])*ratio),\
                     #         int((det_resize[j,0]+det_resize[j,2])/2)+2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
                     #         int((det_resize[j,1]+det_resize[j,3])/2)+2*int((det_resize[j,3]-det_resize[j,1])*ratio)]
                     # label = f'{depth[0]:.2f}'
                     # plot_one_box(xyxy, im0, label=label, color=colors[int(obj[5])], line_thickness=1)
-            distance[:, :4] = det_resize[:,:4]
+            distance = np.concatenate((distance,det_resize.cpu()),axis=0)
     return distance,img_raw # (x1,y1,x2,y2,conf,cls)
 
+#%% 
 def result_handle(dataset,distance,image,soc_client,save_path):    
     cv2.namedWindow('camera',flags=cv2.WINDOW_NORMAL)
     if dataset.mode == 'image':
@@ -191,7 +194,7 @@ if __name__ == '__main__':
     check_requirements()
     save_path = confirm_dir(opt.save_path,opt.ImgLabel)
     save_path = confirm_dir(save_path,datetime.now().strftime("%Y%m%d"))
-    save_path = confirm_dir(save_path,datetime.now().strftime("%Y%m%d%H%M%S"))
+    save_path = confirm_dir(save_path,datetime.now().strftime("%H%M%S"))
     if opt.verbose:
         logging.basicConfig(filename=os.path.join(save_path,'log.txt'),
                             filemode='w',
