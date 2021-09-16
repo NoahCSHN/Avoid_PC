@@ -799,11 +799,11 @@ def confirm_dir(root_path,new_path):
         os.mkdir(path)
     return path
 
-def video_writer(self, w=2560,h=960,fps=30,save_path=''):
+def video_writer(w=2560,h=960,fps=30,save_path=''):
     assert save_path,f"save path invalid {save_path}"
     fourcc = 'mp4v'  # output video codec
     w = int(w/2)
     h = int(h)
-    save_path = confirm_dir(save_path,"raw_left_camera_video")
-    writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
+    save_file = os.path.join(save_path,"raw_left_camera.avi")
+    writer = cv2.VideoWriter(save_file, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
     return writer
