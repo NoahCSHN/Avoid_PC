@@ -219,14 +219,14 @@ def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), im
         iml = cv2.UMat(iml)
         imr = cv2.UMat(imr)
         # 立体校正
-        map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
-        iml_rectified, imr_rectified = rectifyImage(iml, imr, map1x, map1y, map2x, map2y)
+        # map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
+        iml_rectified, imr_rectified = rectifyImage(iml, imr, config.map1x, config.map1y, config.map2x, config.map2y)
         iml_rectified = cv2.UMat.get(iml_rectified)
         imr_rectified = cv2.UMat.get(imr_rectified)
     else:
         # 立体校正
-        map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
-        iml_rectified, imr_rectified = rectifyImage(iml, imr, map1x, map1y, map2x, map2y)        
+        # map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
+        iml_rectified, imr_rectified = rectifyImage(iml, imr, config.map1x, config.map1y, config.map2x, config.map2y)        
     img_ai_raw = iml_rectified
     # 图像缩放
     img_ai, iml_rectified, imr_rectified = resize_convert(iml_rectified, imr_rectified, imgsz, stride)
@@ -234,11 +234,11 @@ def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), im
  
     if debug:
     # 绘制等间距平行线，检查立体校正的效果
-        cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/Left1_rectified.bmp', iml_rectified)
-        cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/Right1_rectified.bmp', imr_rectified)  
-        print(Q)           
+        cv2.imwrite('/home/bynav/0_code/AI_SGBM/runs/detect/exp/Left1_rectified.bmp', iml_rectified)
+        cv2.imwrite('/home/bynav/0_code/AI_SGBM/runs/detect/exp/Right1_rectified.bmp', imr_rectified)  
+        # print(Q)           
         line = draw_line(iml_rectified, imr_rectified)
-        cv2.imwrite('/home/bynav/AI_SGBM/runs/detect/exp/line.png', line)
+        cv2.imwrite('/home/bynav/0_code/AI_SGBM/runs/detect/exp/line.png', line)
  
     # 立体匹配
     # iml_rectified, imr_rectified = preprocess(iml_rectified, imr_rectified)  # 预处理，一般可以削弱光照不均的影响，不做也可以
@@ -257,7 +257,7 @@ def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), im
     return iml_rectified,imr_rectified,img_ai,img_ai_raw
 
 if __name__ == '__main__':
-    config = stereoCamera()
+    config = stereoCamera(3)
     img_left = '../data/images/Left1.bmp'
     img_right = '../data/images/Right1.bmp'
     left,right,left_rgb = Image_Rectification(config, img_left, img_right, path=True)
