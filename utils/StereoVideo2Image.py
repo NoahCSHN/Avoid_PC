@@ -191,7 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('--image_size',type=int,default=416,help='image size read in')
     opt = parser.parse_args()
     save_path = confirm_dir(opt.save_path,datetime.now().strftime("%Y%m%d"))
-    save_path = confirm_dir(save_path,datetime.now().strftime("%Y%m%d%H%M%S"))
+    save_path = confirm_dir(save_path,datetime.now().strftime("%H%M%S"))
     StereoVideo2pic(Vsource = opt.source, 
                     Ipath = save_path,
                     image_size=opt.image_size)
