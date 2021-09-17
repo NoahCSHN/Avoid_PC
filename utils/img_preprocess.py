@@ -1,3 +1,11 @@
+'''
+Author: Noah
+Date: 2021-04-29 20:02:24
+LastEditTime: 2021-09-17 10:56:33
+LastEditors: Please set LastEditors
+Description: image rectification and resize
+FilePath: /AI_SGBM/utils/img_preprocess.py
+'''
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -201,6 +209,24 @@ def resize_convert(imgl_rectified, imgr_rectified, imgsz=640, stride=32):
  
 # @timethis
 def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), imgsz=640, stride=32, path=False, UMat=False, debug=False):
+    '''
+    description: image rectification and resize
+    param {camera_config: class, the camera configuration parameters
+           img_left: matrix or str, image from left camera
+           img_right: matrix or str, image from right camera
+           im0sz: int, the original image size
+           imgsz: int, the image size after resize
+           stride: int, the ratio of downsample
+           path: bool: if true, the imput of img_left and img_right are str of path;otherwise, they are photo
+           UMat: bool: if true, operate all image on gpu 
+           debug: bool: if true, save the rectified image
+    }
+    return {iml_rectified: the rectified and resized image of the left camera
+            imr_rectified: the rectified and resized image of the right camera
+            img_ai: the same as iml_rectified 
+            img_ai_raw: the rectified but not resized image of the left camera
+    }
+    '''
     # 读取MiddleBurry数据集的图片
     t0 = time.time()
     # with timeblock('read file'):
@@ -212,9 +238,16 @@ def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), im
     else:
         iml = img_left  # left
         imr = img_right # right           
-    height, width = im0sz
     # 读取相机内参和外参
     config = camera_config
+    img_ai_raw = iml
+    # 图像缩放
+    if config.width != 1280:
+        img_ai, iml, imr = resize_convert(iml, imr, imgsz, stride)
+    else:
+        img_ai = letterbox(iml,new_shape=(imgsz,imgsz))[0]
+        img_ai = img_ai[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img_ai = np.ascontiguousarray(img_ai)
     if UMat:
         iml = cv2.UMat(iml)
         imr = cv2.UMat(imr)
@@ -226,11 +259,7 @@ def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), im
     else:
         # 立体校正
         # map1x, map1y, map2x, map2y, Q = getRectifyTransform(height, width, config)  # 获取用于畸变校正和立体校正的映射矩阵以及用于计算像素空间坐标的重投影矩阵
-        iml_rectified, imr_rectified = rectifyImage(iml, imr, config.map1x, config.map1y, config.map2x, config.map2y)        
-    img_ai_raw = iml_rectified
-    # 图像缩放
-    img_ai, iml_rectified, imr_rectified = resize_convert(iml_rectified, imr_rectified, imgsz, stride)
-
+        iml_rectified, imr_rectified = rectifyImage(iml, imr, config.map1x, config.map1y, config.map2x, config.map2y)
  
     if debug:
     # 绘制等间距平行线，检查立体校正的效果
