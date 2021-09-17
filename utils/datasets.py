@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-06 08:55:03
-LastEditTime: 2021-09-16 16:41:04
+LastEditTime: 2021-09-16 17:14:49
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /AI_SGBM/utils/datasets.py
@@ -1291,9 +1291,9 @@ class LoadStereoWebcam:  # for inference
         w1 = int(w/2)
         imgl = img0[:,:w1,:]
         imgr = img0[:,w1:,:]
-        cv2.imshow("raw",img0)
-        if cv2.waitKey(1) == ord('q'):
-            sys.exit("Manual exit")
+        # cv2.imshow("raw",img0)
+        # if cv2.waitKey(1) == ord('q'):
+        #     sys.exit("Manual exit")
         # if self.UMat:
         #     imgl=cv2.UMat(imgl)
         #     imgr=cv2.UMat(imgr)

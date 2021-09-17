@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-08 16:03:30
-LastEditTime: 2021-09-16 17:05:36
+LastEditTime: 2021-09-16 17:25:00
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /AI_SGBM/combination.py
@@ -51,8 +51,8 @@ def image_process(camera_config,ai_model,depth_model,
         if len(det):
             # Rescale boxes from img_size to im0 size
             det_resize = det.clone().detach()
-            print(det_resize.shape)
-            print(det_resize)
+            # print(det_resize.shape)
+            # print(det_resize)
             # det_resize = np.copy(det)
             det_resize[:,:4] = scale_coords(img_ai.shape, det_resize[:, :4], img_raw.shape).round()
             for j,obj in enumerate(det):
@@ -73,21 +73,17 @@ def image_process(camera_config,ai_model,depth_model,
     return distance,img_raw # (x1,y1,x2,y2,conf,cls)
 
 #%% 
-def result_handle(dataset,distance,image,soc_client,save_path):    
-    cv2.namedWindow('camera',flags=cv2.WINDOW_NORMAL)
-    if dataset.mode == 'image':
-        cv2.imshow('camera',image)
-        cv2.waitKey(1)
-        file_path = os.path.join(save_path,'images')
-        if not os.path.isdir(file_path):
-            os.mkdir(file_path)
+def result_handle(v_writer = '',dataset = '',distance = '',image = '',soc_client = '',save_path = ''):    
+    cv2.namedWindow('result',flags=cv2.WINDOW_NORMAL)
+    if opt.debug and dataset.mode == 'image':
+        file_path = confirm_dir(save_path,"proc_image")
         files = os.path.join(file_path,str(dataset.count)+'.bmp')
-        # cv2.imwrite(files, im0)
-    elif dataset.mode == 'video' or dataset.mode == 'webcam':
-        dataset.get_vid_dir(os.path.join(save_path,'video'))
-        # dataset.writer.write(im0)
-        cv2.imshow('camera',image)
-        # cv2.imshow('disparity',image)
+        cv2.imwrite(files, image)
+    elif opt.debug and (dataset.mode == 'video' or dataset.mode == 'webcam'):
+        v_writer.write(image)
+    cv2.imshow('result',image)
+    if cv2.waitKey(1) == ord('q'):
+        sys.exit("manual exit")
     if dataset.mode == 'video' or dataset.mode == 'webcam':
         i = dataset.frame
     elif Stereo_Dataset.mode == 'image':
@@ -95,8 +91,8 @@ def result_handle(dataset,distance,image,soc_client,save_path):
     with open(os.path.join(save_path,"result.txt"),'a+') as f:
         f.write("Frame "+str(i)+":\n")
         for j in range(len(distance)):
-            f.write("  "+str(distance[j][0])+','+str(distance[j][1])+','+str(distance[j][2])+','+str(distance[j][3])+','+str(distance[j][4])+','+name[int(distance[j][5])]+','+str(distance[j][6])+'\n')
-    cv2.destroyAllWindows()
+            f.write("  "+str(distance[j][0])+','+str(distance[j][1])+','+str(distance[j][2])+','+str(distance[j][3])+','+str(distance[j][4])+','+name[int(distance[j][5])]+'\n')
+    # cv2.destroyAllWindows()
     logging.info(f'Done.({time.time()-t0:.3f}s)')
     
 
@@ -219,5 +215,7 @@ if __name__ == '__main__':
                                         opt.ratio,
                                         disparity_queue,
                                         pred_queue)
-    
-    
+        if opt.debug:
+            result_handle(v_writer,Stereo_Dataset,distance,image,socket_client,save_path)
+        else:
+            result_handle(dataset = Stereo_Dataset,distance = distance,image = image,soc_client = socket_client,save_path = save_path)
