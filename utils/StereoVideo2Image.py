@@ -152,8 +152,9 @@ class LoadStereoImages:  # for inference
         w1 = round(w/2)
         img0_left = img0[:,:w1,:]
         img0_right = img0[:,w1:,:]
-        img0_left = letterbox(img0_left,(416,416))[0]
-        img0_right = letterbox(img0_right,(416,416))[0]
+        if opt.image_size != 0:
+            img0_left = letterbox(img0_left,(opt.image_size,opt.image_size))[0]
+            img0_right = letterbox(img0_right,(opt.image_size,opt.image_size))[0]
 
 
         return path, img0_left, img0_right, img0_left.shape, self.cap
@@ -169,12 +170,8 @@ class LoadStereoImages:  # for inference
 def StereoVideo2pic(Vsource,Ipath,image_size=416):
     Vdataset = LoadStereoImages(Vsource,img_size=image_size)
     file_dir = str(Path(Ipath).absolute())
-    left_file_dir = os.path.join(file_dir,'left_416')
-    right_file_dir = os.path.join(file_dir,'right_416')
-    if not os.path.isdir(left_file_dir):
-        os.makedirs(left_file_dir)
-    if not os.path.isdir(right_file_dir):
-        os.makedirs(right_file_dir)
+    left_file_dir = confirm_dir(file_dir,'left_'+str(opt.image_size))
+    right_file_dir = confirm_dir(file_dir,'right_'+str(opt.image_size))
     i = 0
     for path, image_left, image_right, im0s, vid_cap in Vdataset:
         imgl_path=os.path.join(left_file_dir, str(i)+'_left.png')
@@ -188,7 +185,7 @@ if __name__ == '__main__':
     # camera parameters configuration
     parser.add_argument('--source', type=str, default='../data/images/indoor', help='integrated image from stereo camera')
     parser.add_argument('--save_path', type=str, default='../data/calibration', help='real time camera')
-    parser.add_argument('--image_size',type=int,default=416,help='image size read in')
+    parser.add_argument('--image_size',type=int,default=416,help='image size read in, 0 means read the raw image')
     opt = parser.parse_args()
     save_path = confirm_dir(opt.save_path,datetime.now().strftime("%Y%m%d"))
     save_path = confirm_dir(save_path,datetime.now().strftime("%H%M%S"))
