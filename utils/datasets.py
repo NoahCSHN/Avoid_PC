@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-06 08:55:03
-LastEditTime: 2021-09-16 17:14:49
+LastEditTime: 2021-09-17 15:15:37
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /AI_SGBM/utils/datasets.py
@@ -1252,7 +1252,7 @@ class LoadStereoWebcam:  # for inference
         self.__cap.set(cv2.CAP_PROP_FPS,fps)
         self.cam_freq = self.__cap.get(cv2.CAP_PROP_FPS)
         self.fps = fps
-        print('Camera run under (%s, %s), %s fps'%(str(2560),str(960),str(self.fps)))
+        print('Camera run under (%s, %s), %s fps'%(str(self.__cap.get(cv2.CAP_PROP_FRAME_WIDTH)),str(self.__cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),str(self.cam_freq)))
         self.mode = 'webcam'
         self.frame = -1
         self.time = -1
