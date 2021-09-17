@@ -31,6 +31,8 @@ class stereoCamera(object):
             # 左相机内参
             print('Camera OV9714 1280X720',end='--')
             print('Out of time')
+            self.width = 1280
+            self.height = 720
             self.cam_matrix_left = np.array([[1147.039625617031, 0, 733.098961811485],
                                             [0., 1150.152056805138, 380.840107187423],
                                             [0., 0., 1.]])
@@ -67,6 +69,8 @@ class stereoCamera(object):
             # 左相机内参
             print('Camera AR0135 1280x720',end='--')
             print('Out of time')
+            self.width = 1280
+            self.height = 720
             self.cam_matrix_left = np.array([[899.9306, 0, 672.5951],
                                             [0., 903.0798, 472.7901],
                                             [0., 0., 1.]])
@@ -102,26 +106,28 @@ class stereoCamera(object):
             # %% 1280x960
             # 左相机内参
             print('Camera AR0135 1280x960',end='--')
-            print('Updated')
-            self.cam_matrix_left = np.array([[916.073240187922, 0, 656.49819197451],
-                                            [0., 919.750570662266, 491.724914549862],
+            print('Up to date')
+            self.width = 1280
+            self.height = 960
+            self.cam_matrix_left = np.array([[923.642308115181, 0, 661.563612365323],
+                                            [0., 927.277662980802, 473.585058718788],
                                             [0., 0., 1.]])
             # 右相机内参
-            self.cam_matrix_right = np.array([[917.003495757968, 0, 647.815907406419],
-                                            [0., 920.257831558205, 511.995209772872],
+            self.cam_matrix_right = np.array([[920.534932214038, 0, 650.83405580391],
+                                            [0., 922.887792853376, 505.013813754372],
                                             [0., 0., 1.]])
     
             # 左右相机畸变系数:[k1, k2, p1, p2, k3]
-            self.distortion_l = np.array([[0.0188404469237125, 0.00312881909906112, -0.000219315961671355, 0.0309668359284737, -0.104624021243619]])
-            self.distortion_r = np.array([[0.0159674353572589, 0.0019646783106287, -0.00111747918929796, 0.0632312756146877, -0.190454902682019]])
+            self.distortion_l = np.array([[0.0205144610251091, 0.00162711308435883, 0.00309271639752063, 0.003644684681153, -0.0711454543707475]])
+            self.distortion_r = np.array([[0.0131449540956766, -0.00937955020237468, 0.00343709188166571, 0.00193102960455661, 0.0162388757315773]])
     
             # 旋转矩阵
-            self.R = np.array([[0.999960467371806, 0.00131324360880243, -0.00879426431167983],
-                            [-0.00130061366363252, 0.999998114918791, 0.0014417222209966],
-                            [0.00879614106626982, -0.00143022728560272, 0.9999602903877]])
+            self.R = np.array([[0.999928614176774, 0.00148341625281357, -0.0118560544337673],
+                            [-0.00140644636358242, 0.999977900426304, 0.00649773557688742],
+                            [0.0118654312665798, -0.00648059682603934, 0.999908602526069]])
     
             # 平移矩阵
-            self.T = np.array([[-45.0835987063544], [0.41222321365002], [0.116889626724434]])
+            self.T = np.array([[-45.1754833198736], [0.327319805179798], [-1.00710987782975]])
     
             # 焦距 unit:pixel resolution ratio ，1280*960 928.778 640*640 464.389 416*416 344.906
             # if width == 1280:
@@ -129,13 +135,13 @@ class stereoCamera(object):
             # elif width == 640:
             #     self.focal_length = 534.314945
             # else:
-            self.focal_length = 347.304714241
+            self.focal_length = 996.44
 
             # 焦距 unit:pixel 928.778
-            self.focal_length_pix = 1068.62989  # 默认值，一般取立体校正后的重投影矩阵Q中的 Q[2,3]
+            self.focal_length_pix = 996.44  # 默认值，一般取立体校正后的重投影矩阵Q中的 Q[2,3]
 
             # 基线距离
-            self.baseline = 45.0835987063544  # 单位：mm， 为平移向量的第一个参数（取绝对值）
+            self.baseline = 45.1754833198736  # 单位：mm， 为平移向量的第一个参数（取绝对值）
             
             # pixel size unit: mm
             self.pixel_size = 0.00375
@@ -144,7 +150,9 @@ class stereoCamera(object):
             # %% 416x416
             # 左相机内参
             print('Camera AR0135 416x416',end='--')
-            print('Updated')
+            print('Up to date')
+            self.width = 416
+            self.height = 416
             self.cam_matrix_left = np.array([[299.84033260309, 0, 215.430182780566],
                                             [0., 301.082445397163, 206.370313144114],
                                             [0., 0., 1.]])
@@ -181,35 +189,37 @@ class stereoCamera(object):
             # %% 640x640
             # 左相机内参
             print('Camera AR0135 640x640',end='--')
-            print('Out of time')
-            self.cam_matrix_left = np.array([[450.147280424725, 0, 335.637292966807],
-                                            [0., 452.168140408469, 316.352537960283],
+            print('Up to date')
+            self.width = 640
+            self.height = 640
+            self.cam_matrix_left = np.array([[461.844833948282, 0, 331.403192583902],
+                                            [0., 463.711296692977, 316.784810501856],
                                             [0., 0., 1.]])
             # 右相机内参
-            self.cam_matrix_right = np.array([[448.226714815196, 0, 335.274249285765],
-                                            [0., 449.662168168266, 326.915069054873],
+            self.cam_matrix_right = np.array([[460.246022343269, 0, 326.067704392229],
+                                            [0., 461.447294239966, 332.546977631754],
                                             [0., 0., 1.]])
     
             # 左右相机畸变系数:[k1, k2, p1, p2, k3]
-            self.distortion_l = np.array([[0.0110748304468689, -0.0461892604061901, -0.00251503249303815, 0.00550251162281917, 0.00469509056846245]])
-            self.distortion_r = np.array([[-0.00678430478281016, 0.0246335991493513, -0.00181273728323632, 0.00664941181046333, -0.0594973515663427]])
+            self.distortion_l = np.array([[0.0224101980393075, -0.00802132393404491, 0.00296299386878469, 0.00385699064967932, -0.0575143921289213]])
+            self.distortion_r = np.array([[0.0163278657370845, -0.0226085245961337, 0.00328929552458683, 0.00219139151122059, 0.0308441411744662]])
     
             # 旋转矩阵
-            self.R = np.array([[ 0.99999835625336, 0.000340638527186762, 0.0017808582120025],
-                            [-0.00034062903854604, 0.999999941970071, -5.63143166745552e-06],
-                            [-0.00178086002694201, 5.02481039027361e-06, 0.999998414254901]])  
+            self.R = np.array([[0.999928811085943, 0.00146532069116139, -0.0118416888797451],
+                            [-0.00138753491040948, 0.999977426039445, 0.00657435612052772],
+                            [0.0118510551059819, -0.00655745734253603, 0.999908271916017]])  
                               
             # 平移矩阵
-            self.T = np.array([[-44.948428632946], [0.395194425669592], [-1.08129285622984]])
+            self.T = np.array([[-45.2018551679078], [0.323914220091648], [-1.05093440368482]])
     
             # 焦距 unit:pixel resolution ratio 640x640 349.124
-            self.focal_length = 464.731
+            self.focal_length = 495.84
 
             # 焦距 unit:pixel 349.124
-            self.focal_length_pix = 464.731  # 默认值，一般取立体校正后的重投影矩阵Q中的 Q[2,3]
+            self.focal_length_pix = 495.84  # 默认值，一般取立体校正后的重投影矩阵Q中的 Q[2,3]
 
             # 基线距离
-            self.baseline = 44.948428632946  # 单位：mm， 为平移向量的第一个参数（取绝对值）
+            self.baseline = 45.2018551679078  # 单位：mm， 为平移向量的第一个参数（取绝对值）
             
             # pixel size unit: mm
             self.pixel_size = 0.00375    
@@ -219,6 +229,8 @@ class stereoCamera(object):
             # 左相机内参
             print('Camera AR0135 640x480',end='--')
             print('Out of time')
+            self.width = 640
+            self.height = 480
             self.cam_matrix_left = np.array([[464.439312296583, 0, 342.548068699737],
                                             [0., 465.457738211478, 233.651433626778],
                                             [0., 0., 1.]])
@@ -256,6 +268,8 @@ class stereoCamera(object):
             # 左相机内参
             print('Datasets Middlebury 416x416',end='--')
             print('Updated')
+            self.width = 416
+            self.height = 416
             self.cam_matrix_left = np.array([[4152.073, 0, 1288.147],
                                             [0., 4152.073, 973.571],
                                             [0., 0., 1.]])
@@ -290,8 +304,8 @@ class stereoCamera(object):
 
         # 计算校正变换
         self.R1, self.R2, self.P1, self.P2, self.Q, self.roi1, self.roi2 = cv2.stereoRectify(self.cam_matrix_left, self.distortion_l, self.cam_matrix_right,\
-                                                                                             self.distortion_r, (width, height), self.R, self.T, alpha=0)
+                                                                                             self.distortion_r, (self.width, self.height), self.R, self.T, alpha=0)
     
-        self.map1x, self.map1y = cv2.initUndistortRectifyMap(self.cam_matrix_left, self.distortion_l, self.R1, self.P1, (width, height), cv2.CV_32FC1)
-        self.map2x, self.map2y = cv2.initUndistortRectifyMap(self.cam_matrix_right, self.distortion_r, self.R2, self.P2, (width, height), cv2.CV_32FC1)
+        self.map1x, self.map1y = cv2.initUndistortRectifyMap(self.cam_matrix_left, self.distortion_l, self.R1, self.P1, (self.width, self.height), cv2.CV_32FC1)
+        self.map2x, self.map2y = cv2.initUndistortRectifyMap(self.cam_matrix_right, self.distortion_r, self.R2, self.P2, (self.width, self.height), cv2.CV_32FC1)
         print(self.Q)
