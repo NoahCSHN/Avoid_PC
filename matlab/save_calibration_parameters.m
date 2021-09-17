@@ -1,3 +1,4 @@
+function save_calibration_parameters(file_path)
 %% 
 left_intr_matrix = stereoParams.CameraParameters1.IntrinsicMatrix
 right_intr_matrix = stereoParams.CameraParameters2.IntrinsicMatrix
@@ -9,7 +10,6 @@ right_rot_matrix = stereoParams.RotationOfCamera2
 right_tra_matrix = stereoParams.TranslationOfCamera2
 
 %%
-file_path = '/home/bynav/0_code/AI_SGBM/data/calibration/20210916/142816';
 file_name = fullfile(file_path,'left_intr_matrix.mat');
 save(file_name,'left_intr_matrix');
 file_name = fullfile(file_path,'right_intr_matrix.mat');
@@ -26,3 +26,4 @@ file_name = fullfile(file_path,'right_rot_matrix.mat');
 save(file_name,'right_rot_matrix');
 file_name = fullfile(file_path,'right_tra_matrix.mat');
 save(file_name,'right_tra_matrix');
+end
