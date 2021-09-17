@@ -1,13 +1,13 @@
 '''
 Author: your name
 Date: 2021-04-08 16:03:30
-LastEditTime: 2021-09-16 17:25:00
+LastEditTime: 2021-09-17 15:39:14
 LastEditors: Please set LastEditors
-Description: In User Settings Edit
+Description: the user interface of avoid model
 FilePath: /AI_SGBM/combination.py
 '''
 
-import argparse,logging,time,os,cv2,queue
+import argparse,logging,time,os,cv2,queue,sys
 import numpy as np
 from utils.Stereo_Application import Stereo_Matching,disparity_centre
 from detect import YOLOv5
@@ -30,7 +30,9 @@ def image_process(camera_config,ai_model,depth_model,
                   ImgLabel,ratio,
                   disparity_queue,pred_queue):
     
-    distance=np.zeros((10,6),dtype=float)
+    j=0
+    i=0
+    distance=np.zeros((20,11),dtype=float)
     # depth=np.zeros((1,),dtype=float) #distance calculate
     img_left, img_right, img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride,UMat=opt.UMat, debug=opt.debug)
     disparity, color_3d = depth_model.run(img_left,img_right,camera_config.Q,disparity_queue,opt.UMat,opt.filter)
@@ -57,23 +59,28 @@ def image_process(camera_config,ai_model,depth_model,
             det_resize[:,:4] = scale_coords(img_ai.shape, det_resize[:, :4], img_raw.shape).round()
             for j,obj in enumerate(det):
                 temp_dis=disparity_centre(obj, ratio, disparity, color_3d[:,:,2],camera_config.focal_length, camera_config.baseline, camera_config.pixel_size, opt.sm_mindi)
-                
 #%% TODO: 将最终深度结果画到图像里
                 # if debug:
                 xyxy = [det_resize[j,0],det_resize[j,1],det_resize[j,2],det_resize[j,3]]
                 label = f'{names[int(obj[5])]} {obj[4]:.2f}:{temp_dis:.2f}'
-                plot_one_box(xyxy, img_raw, label=label, color=DATASET_NAMES.name_color[DATASET_NAMES.voc_names.index(names[int(obj[5])])], line_thickness=2)
+                plot_one_box(xyxy, img_raw, label=label, color=DATASET_NAMES.name_color[DATASET_NAMES.coco_names.index(names[int(obj[5])])], line_thickness=2)
                     # xyxy = [int((det_resize[j,0]+det_resize[j,2])/2)-2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
                     #         int((det_resize[j,1]+det_resize[j,3])/2)-2*int((det_resize[j,3]-det_resize[j,1])*ratio),\
                     #         int((det_resize[j,0]+det_resize[j,2])/2)+2*int((det_resize[j,2]-det_resize[j,0])*ratio),\
                     #         int((det_resize[j,1]+det_resize[j,3])/2)+2*int((det_resize[j,3]-det_resize[j,1])*ratio)]
                     # label = f'{depth[0]:.2f}'
                     # plot_one_box(xyxy, im0, label=label, color=colors[int(obj[5])], line_thickness=1)
-            distance = np.concatenate((distance,det_resize.cpu()),axis=0)
-    return distance,img_raw # (x1,y1,x2,y2,conf,cls)
+                distance[j,0] = temp_dis
+                distance[j,1:7] = det_resize[j,:].cpu()
+                distance[j,7:] = obj[:4].cpu()
+    if j == 0:
+        distance = []
+    else:
+        distance = distance[:j,:]
+    return distance,img_raw # (distance,x1,y1,x2,y2,conf,cls)
 
 #%% 
-def result_handle(v_writer = '',dataset = '',distance = '',image = '',soc_client = '',save_path = ''):    
+def result_handle(v_writer = '',dataset = '',distance = '',image = '',soc_client = '',save_path = ''):
     cv2.namedWindow('result',flags=cv2.WINDOW_NORMAL)
     if opt.debug and dataset.mode == 'image':
         file_path = confirm_dir(save_path,"proc_image")
@@ -89,9 +96,22 @@ def result_handle(v_writer = '',dataset = '',distance = '',image = '',soc_client
     elif Stereo_Dataset.mode == 'image':
         i = dataset.count
     with open(os.path.join(save_path,"result.txt"),'a+') as f:
-        f.write("Frame "+str(i)+":\n")
-        for j in range(len(distance)):
-            f.write("  "+str(distance[j][0])+','+str(distance[j][1])+','+str(distance[j][2])+','+str(distance[j][3])+','+str(distance[j][4])+','+name[int(distance[j][5])]+'\n')
+        f.write("Frame "+str(i)+":")
+        if len(distance):
+            for j in range(len(distance)):
+                f.write("\n  "+name[int(distance[j][5])]
+                +': distance,'+str(distance[j][0])
+                +'; x0,'+str(distance[j][1])
+                +'; y0,'+str(distance[j][2])
+                +'; x1,'+str(distance[j][3])
+                +'; y1,'+str(distance[j][4])
+                +','+str(distance[j][7])
+                +','+str(distance[j][8])
+                +','+str(distance[j][9])
+                +','+str(distance[j][10])
+                +'\n')
+        else:
+            f.write("None detected.\n")
     # cv2.destroyAllWindows()
     logging.info(f'Done.({time.time()-t0:.3f}s)')
     
@@ -106,7 +126,6 @@ def initial_platform(save_path):
     @Returns  :
     -------
     """
-    
     
     # initialize information container for information exchange between mulit-threads
     disparity_queue = queue.Queue(maxsize=1)
@@ -153,7 +172,7 @@ if __name__ == '__main__':
     # YOLOv5 parameters configuration
     parser.add_argument('--ImgLabel', type=str, default='test', help='Images ID or Label')  # file/folder, 0 for webcam
     parser.add_argument('--ratio', type=float, default=0.05, help='object confidence threshold')
-    parser.add_argument('--weights', type=str, default='runs/train/exp9/weights/best.pt', help='YOLOv5 model weights')
+    parser.add_argument('--weights', type=str, default='weights/yolov5s.pt', help='YOLOv5 model weights')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--img_size', type=int, default=640, help='inference size (pixels)')
     # SGBM or BM parameters configuration
