@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-04-08 16:03:30
-LastEditTime: 2021-09-17 15:39:14
+LastEditTime: 2021-09-18 10:06:26
 LastEditors: Please set LastEditors
 Description: the user interface of avoid model
 FilePath: /AI_SGBM/combination.py
@@ -36,7 +36,7 @@ def image_process(camera_config,ai_model,depth_model,
     # depth=np.zeros((1,),dtype=float) #distance calculate
     img_left, img_right, img_ai, img_raw=Image_Rectification(camera_config, ImgL, ImgR, im0sz=im0s, imgsz=ai_model.imgsz, stride=ai_model.stride,UMat=opt.UMat, debug=opt.debug)
     disparity, color_3d = depth_model.run(img_left,img_right,camera_config.Q,disparity_queue,opt.UMat,opt.filter)
-    pred, names = ai_model.detect(img_ai,img_raw,im0s,0.45,0.25, None,False,False, pred_queue,opt.debug)
+    pred, names = ai_model.detect(img_ai,img_raw,im0s,opt.iou_thres,opt.confi_thres, None,False,False, pred_queue,opt.debug)
     # sm_t = Thread(target=depth_model.run,args=(img_left,img_right,camera_config.Q,disparity_queue,opt.UMat,opt.filter))
     # ai_t = Thread(target=ai_model.detect,args=(img_ai,img_raw,im0s,0.45,0.25, 
     #                                            None,False,False,
@@ -56,7 +56,8 @@ def image_process(camera_config,ai_model,depth_model,
             # print(det_resize.shape)
             # print(det_resize)
             # det_resize = np.copy(det)
-            det_resize[:,:4] = scale_coords(img_ai.shape, det_resize[:, :4], img_raw.shape).round()
+            # print(det)
+            det_resize[:,:4] = scale_coords(img_ai.shape[1:], det_resize[:, :4], img_raw.shape).round()
             for j,obj in enumerate(det):
                 temp_dis=disparity_centre(obj, ratio, disparity, color_3d[:,:,2],camera_config.focal_length, camera_config.baseline, camera_config.pixel_size, opt.sm_mindi)
 #%% TODO: 将最终深度结果画到图像里
@@ -104,11 +105,7 @@ def result_handle(v_writer = '',dataset = '',distance = '',image = '',soc_client
                 +'; x0,'+str(distance[j][1])
                 +'; y0,'+str(distance[j][2])
                 +'; x1,'+str(distance[j][3])
-                +'; y1,'+str(distance[j][4])
-                +','+str(distance[j][7])
-                +','+str(distance[j][8])
-                +','+str(distance[j][9])
-                +','+str(distance[j][10])
+                +'; y1,'+str(distance[j][4]) 
                 +'\n')
         else:
             f.write("None detected.\n")
@@ -171,7 +168,8 @@ if __name__ == '__main__':
     parser.add_argument("--fps", help="The webcam frequency", type=int, default=4)
     # YOLOv5 parameters configuration
     parser.add_argument('--ImgLabel', type=str, default='test', help='Images ID or Label')  # file/folder, 0 for webcam
-    parser.add_argument('--ratio', type=float, default=0.05, help='object confidence threshold')
+    parser.add_argument('--confi_thres', type=float, default=0.3, help='object detect confidence threshold')
+    parser.add_argument('--iou_thres', type=float, default=0.45, help='object detect confidence threshold')
     parser.add_argument('--weights', type=str, default='weights/yolov5s.pt', help='YOLOv5 model weights')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--img_size', type=int, default=640, help='inference size (pixels)')
@@ -196,7 +194,7 @@ if __name__ == '__main__':
     parser.add_argument("--sm_d12md", help="Stereo matching Disp12MaxDiff", type=int, default=1)    
     parser.add_argument("--filter", help="Enable post WLS filter",action="store_true")
     parser.add_argument("--cam_type", help="0: OV9714, 1: AR0135 1280X720; 2: AR0135 1280X960; 3:AR0135 416X416; 4:AR0135 640X640; 5:AR0135 640X480; 6:MIDDLEBURY 416X360", type=int, default=4)
-    parser.add_argument("--stereo_ratio", help="ratio for distance calculate", type=float, default=0.05)
+    parser.add_argument("--ratio", help="ratio for distance calculate", type=float, default=0.05)
     # file and log configuration
     parser.add_argument("--verbose", help="increase output verbosity", action="store_true")
     parser.add_argument("--debug", help="save data source for replay", action="store_true")
