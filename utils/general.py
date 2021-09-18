@@ -570,7 +570,9 @@ def increment_path(path, exist_ok=True, sep=''):
         n = max(i) + 1 if i else 2  # increment number
         return f"{path}{sep}{n}"  # update path
 
+####################################################################################################
 '''Noah defined function'''
+####################################################################################################
 def find_cam(cam):
     cmd = ["/usr/bin/v4l2-ctl", "--list-devices"]
     out, err = Popen(cmd, stdout=PIPE, stderr=PIPE).communicate()
@@ -807,3 +809,4 @@ def video_writer(w=2560,h=960,fps=30,save_path=''):
     save_file = os.path.join(save_path,"raw_left_camera.avi")
     writer = cv2.VideoWriter(save_file, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
     return writer
+

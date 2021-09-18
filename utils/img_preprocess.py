@@ -1,7 +1,7 @@
 '''
 Author: Noah
 Date: 2021-04-29 20:02:24
-LastEditTime: 2021-09-17 10:56:33
+LastEditTime: 2021-09-18 08:35:58
 LastEditors: Please set LastEditors
 Description: image rectification and resize
 FilePath: /AI_SGBM/utils/img_preprocess.py
@@ -241,11 +241,13 @@ def Image_Rectification(camera_config, img_left, img_right, im0sz=(1280,720), im
     # 读取相机内参和外参
     config = camera_config
     img_ai_raw = iml
+    # img_ai_raw = img_ai_raw[:,:,::-1].transpose(2,0,1)
+    # img_ai_raw = np.ascontiguousarray(img_ai_raw)
     # 图像缩放
     if config.width != 1280:
         img_ai, iml, imr = resize_convert(iml, imr, imgsz, stride)
     else:
-        img_ai = letterbox(iml,new_shape=(imgsz,imgsz))[0]
+        img_ai = letterbox(iml,new_shape=(imgsz,imgsz),stride=stride)[0]
         img_ai = img_ai[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
         img_ai = np.ascontiguousarray(img_ai)
     if UMat:
